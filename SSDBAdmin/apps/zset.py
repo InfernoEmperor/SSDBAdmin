@@ -30,7 +30,8 @@ def zsetLists():
         page_size = request.cookies.get('SIZE', 20)
     start = request.args.get('start', '')
     db_client = SSDBClient(request)
-    zset_list, has_next = db_client.zsetList(start=start, page_num=page_num, page_size=int(page_size))
+    zset_list, has_next = db_client.zsetList(
+        start=start, page_num=page_num, page_size=int(page_size))
     select_arg = {'start': start, 'page_size': int(page_size)}
     resp = make_response(render_template('zset/zset.html', zset_list=zset_list, has_next=has_next,
                                          has_prev=page_num > 1,
@@ -127,11 +128,13 @@ def zsetClear():
     """
     if request.method == 'POST':
         name = request.form.get('name')
+        start = request.form.get('start')
         SSDBClient(request).zsetClear(name)
-        return redirect(url_for('zsetLists'))
+        return redirect(url_for('zsetLists', start=start))
     else:
         queue_name = request.args.get('name')
-        return render_template('zset/zset_clear.html', name=queue_name, active='zset')
+        start = request.args.get('start')
+        return render_template('zset/zset_clear.html', name=queue_name, active='zset', start=start)
 
 
 @app.route('/ssdbadmin/zset/zget/')

@@ -40,7 +40,8 @@ def getSAServer(request):
 class SSDBClient(object):
     def __init__(self, request):
         host, port = getSAServer(request)
-        self.__conn = Redis(connection_pool=BlockingConnectionPool(host=host, port=int(port)))
+        self.__conn = Redis(
+            connection_pool=BlockingConnectionPool(host=host, port=int(port)))
 
     def serverInfo(self):
         """
@@ -59,12 +60,21 @@ class SSDBClient(object):
         stats = info_list[16]
 
         def _parseDiskUsage(_stats):
-            return sum([int(each.split()[2]) for each in _stats.split('\n')[3:-1]])
+            return sum(
+                [int(each.split()[2]) for each in _stats.split('\n')[3:-1]])
 
-        return {'info_list': info_list, 'version': version, 'links': links, 'total_calls': total_calls,
-                'db_size': db_size, 'bin_logs': bin_logs, 'service_key_range': service_key_range,
-                'data_key_range': data_key_range,
-                'stats': stats, 'disk_usage': _parseDiskUsage(stats)}
+        return {
+            'info_list': info_list,
+            'version': version,
+            'links': links,
+            'total_calls': total_calls,
+            'db_size': db_size,
+            'bin_logs': bin_logs,
+            'service_key_range': service_key_range,
+            'data_key_range': data_key_range,
+            'stats': stats,
+            'disk_usage': _parseDiskUsage(stats)
+        }
 
     # region queue operate
     def queueList(self, name_start, name_end, page_num, page_size):
@@ -79,8 +89,14 @@ class SSDBClient(object):
             items list
         """
         limit = (page_num + 1) * page_size
-        items_list = [_.decode() for _ in self.__conn.execute_command('qlist', name_start, name_end, limit)]
-        page_count, page_num = getPagingTabsInfo(data_count=len(items_list), page_no=page_num, page_row_num=page_size)
+        items_list = [
+            _.decode() for _ in self.__conn.execute_command(
+                'qlist', name_start, name_end, limit)
+        ]
+        page_count, page_num = getPagingTabsInfo(
+            data_count=len(items_list),
+            page_no=page_num,
+            page_row_num=page_size)
         has_next = True if page_count > page_num else False
         queue_list = map(lambda queue_name: {'name': queue_name, 'size': self.__conn.llen(queue_name)},
                          items_list[(page_num - 1) * page_size: page_num * page_size])
@@ -181,8 +197,15 @@ class SSDBClient(object):
             items list
         """
         limit = (page_num + 1) * page_size
-        name_list = [_.decode() for _ in self.__conn.execute_command('zlist', start, '', limit)]
-        page_count, page_num = getPagingTabsInfo(data_count=len(name_list), page_no=page_num, page_row_num=page_size)
+        name_list = [
+            _.decode()
+            for _ in self.__conn.execute_command('zlist', start, '', limit)
+        ]
+        page_count, page_num = getPagingTabsInfo(
+            data_count=len(name_list),
+            page_no=page_num,
+            page_row_num=page_size)
+
         has_next = True if page_count > page_num else False
         zset_list = map(lambda zset_name: {'name': zset_name, 'size': self.__conn.zcard(zset_name)},
                         name_list[(page_num - 1) * page_size: page_num * page_size - 1])
@@ -223,7 +246,10 @@ class SSDBClient(object):
         start, end = int(offset), int(offset) + int(limit) - 1
         key_list = self.__conn.zrange(zset_name, start, end)
         key_list = [_.decode() for _ in key_list if isinstance(_, bytes)]
-        return [{"key": _, "score": int(self.__conn.zscore(zset_name, _))} for _ in key_list]
+        return [{
+            "key": _,
+            "score": int(self.__conn.zscore(zset_name, _))
+        } for _ in key_list]
 
     def zsetRank(self, zset_name, key):
         """
@@ -280,8 +306,14 @@ class SSDBClient(object):
             items list
         """
         limit = (page_num + 1) * page_size
-        items_list = [_.decode() for _ in self.__conn.execute_command('hlist', name_start, name_end, limit)]
-        page_count, page_num = getPagingTabsInfo(data_count=len(items_list), page_no=page_num, page_row_num=page_size)
+        items_list = [
+            _.decode() for _ in self.__conn.execute_command(
+                'hlist', name_start, name_end, limit)
+        ]
+        page_count, page_num = getPagingTabsInfo(
+            data_count=len(items_list),
+            page_no=page_num,
+            page_row_num=page_size)
         has_next = True if page_count > page_num else False
         hash_list = map(lambda hash_name: {'name': hash_name, 'size': self.__conn.hlen(hash_name)},
                         items_list[(page_num - 1) * page_size: page_num * page_size])
@@ -298,9 +330,13 @@ class SSDBClient(object):
         Returns:
             list of hash item
         """
-        item_list = self.__conn.execute_command('hscan', hash_name, key_start, key_end, limit)
+        item_list = self.__conn.execute_command('hscan', hash_name, key_start,
+                                                key_end, limit)
         item_list = [_.decode() for _ in item_list if isinstance(_, bytes)]
-        hash_list = [{'key': item_list[index], 'value': item_list[index + 1]} for index in range(0, len(item_list), 2)]
+        hash_list = [{
+            'key': item_list[index],
+            'value': item_list[index + 1]
+        } for index in range(0, len(item_list), 2)]
         return hash_list
 
     def hashSet(self, hash_name, key, value):
@@ -372,9 +408,19 @@ class SSDBClient(object):
         Returns:
             list of hash item
         """
-        item_list = self.__conn.execute_command('scan', key_start, key_end, limit)
-        item_list = [_.decode() for _ in item_list if isinstance(_, bytes)]
-        hash_list = [{'key': item_list[index], 'value': item_list[index + 1]} for index in range(0, len(item_list), 2)]
+        item_list = self.__conn.execute_command('scan', key_start, key_end,
+                                                limit)
+        items = []
+        for _ in item_list:
+            if isinstance(_, bytes):
+                try:
+                    items.append(_.decode())
+                except:
+                    items.append(_)
+        hash_list = [{
+            'key': items[index],
+            'value': items[index + 1]
+        } for index in range(0, len(items), 2)]
         return hash_list
 
     def kvGet(self, key):
@@ -416,6 +462,7 @@ class SSDBClient(object):
 
 
 if __name__ == '__main__':
+
     class R(object):
         @property
         def args(self):
@@ -424,7 +471,6 @@ if __name__ == '__main__':
         @property
         def cookies(self):
             return {"SSDBADMIN_SERVER": "127.0.0.1:8080"}
-
 
     request = R()
     db = SSDBClient(request)
