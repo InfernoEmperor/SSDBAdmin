@@ -49,7 +49,10 @@ class SSDBClient(object):
         Returns:
             info message as dict
         """
-        info_list = [_.decode() for _ in self.__conn.execute_command('info')]
+        info_list = [
+            _.decode() if isinstance(_, bytes) else _
+            for _ in self.__conn.execute_command('info')
+        ]
         version = info_list[2]
         links = info_list[4]
         total_calls = info_list[6]
@@ -93,13 +96,15 @@ class SSDBClient(object):
             _.decode() for _ in self.__conn.execute_command(
                 'qlist', name_start, name_end, limit)
         ]
-        page_count, page_num = getPagingTabsInfo(
-            data_count=len(items_list),
-            page_no=page_num,
-            page_row_num=page_size)
+        page_count, page_num = getPagingTabsInfo(data_count=len(items_list),
+                                                 page_no=page_num,
+                                                 page_row_num=page_size)
         has_next = True if page_count > page_num else False
-        queue_list = map(lambda queue_name: {'name': queue_name, 'size': self.__conn.llen(queue_name)},
-                         items_list[(page_num - 1) * page_size: page_num * page_size])
+        queue_list = map(
+            lambda queue_name: {
+                'name': queue_name,
+                'size': self.__conn.llen(queue_name)
+            }, items_list[(page_num - 1) * page_size:page_num * page_size])
         return queue_list, has_next
 
     def queuePush(self, queue_name, item, push_type):
@@ -198,17 +203,18 @@ class SSDBClient(object):
         """
         limit = (page_num + 1) * page_size
         name_list = [
-            _.decode()
+            _.decode("utf8", "ignore")
             for _ in self.__conn.execute_command('zlist', start, '', limit)
         ]
-        page_count, page_num = getPagingTabsInfo(
-            data_count=len(name_list),
-            page_no=page_num,
-            page_row_num=page_size)
-
+        page_count, page_num = getPagingTabsInfo(data_count=len(name_list),
+                                                 page_no=page_num,
+                                                 page_row_num=page_size)
         has_next = True if page_count > page_num else False
-        zset_list = map(lambda zset_name: {'name': zset_name, 'size': self.__conn.zcard(zset_name)},
-                        name_list[(page_num - 1) * page_size: page_num * page_size - 1])
+        zset_list = map(
+            lambda zset_name: {
+                'name': zset_name,
+                'size': self.__conn.zcard(zset_name)
+            }, name_list[(page_num - 1) * page_size:page_num * page_size - 1])
         return zset_list, has_next
 
     def zsetSet(self, name, key, score):
@@ -310,13 +316,15 @@ class SSDBClient(object):
             _.decode() for _ in self.__conn.execute_command(
                 'hlist', name_start, name_end, limit)
         ]
-        page_count, page_num = getPagingTabsInfo(
-            data_count=len(items_list),
-            page_no=page_num,
-            page_row_num=page_size)
+        page_count, page_num = getPagingTabsInfo(data_count=len(items_list),
+                                                 page_no=page_num,
+                                                 page_row_num=page_size)
         has_next = True if page_count > page_num else False
-        hash_list = map(lambda hash_name: {'name': hash_name, 'size': self.__conn.hlen(hash_name)},
-                        items_list[(page_num - 1) * page_size: page_num * page_size])
+        hash_list = map(
+            lambda hash_name: {
+                'name': hash_name,
+                'size': self.__conn.hlen(hash_name)
+            }, items_list[(page_num - 1) * page_size:page_num * page_size])
         return hash_list, has_next
 
     def hashScan(self, hash_name, key_start, key_end, limit):

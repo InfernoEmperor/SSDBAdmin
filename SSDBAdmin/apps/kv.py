@@ -45,7 +45,7 @@ def kvScan():
                                          has_prev=page_number > 1,
                                          select_arg=select_arg,
                                          active='kv'))
-    resp.set_cookie('SIZE', str(page_size))
+    resp.set_cookie('SIZE', str(page_size), httponly=True, samesite='Lax')
     return resp
 
 
@@ -90,5 +90,6 @@ def kvDel():
         return render_template('kv/kv_del.html', keys=keys, active='kv')
     else:
         keys = request.form.getlist('key')
-        SSDBClient(request).kvDel(*keys)
+        if keys:
+            SSDBClient(request).kvDel(*keys)
         return redirect(url_for('kvScan'))
